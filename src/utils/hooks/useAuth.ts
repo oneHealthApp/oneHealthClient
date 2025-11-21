@@ -21,7 +21,7 @@ function useAuth() {
 
     const query = useQuery()
 
-    const { token, signedIn } = useAppSelector((state) => state.auth.session)
+    const { accessToken, signedIn } = useAppSelector((state) => state.auth.session)
 
     const signIn = async (
         values: SignInCredential,
@@ -34,19 +34,22 @@ function useAuth() {
     > => {
         try {
             const resp = await apiSignIn(values)
-            if (resp.data) {
-                const { token } = resp.data
-                dispatch(signInSuccess(token))
-                if (resp.data.user) {
+            if (resp.data && resp.data.success) {
+                const { accessToken, refreshToken, expiresIn, user } = resp.data.data
+                dispatch(signInSuccess({ accessToken, refreshToken, expiresIn }))
+                if (user) {
+                    // Map roles to authority for backward compatibility
+                    const authority = user.roles?.map(role => role.roleName) || []
                     dispatch(
-                        setUser(
-                            resp.data.user || {
-                                avatar: '',
-                                userName: 'Anonymous',
-                                authority: ['USER'],
-                                email: '',
-                            },
-                        ),
+                        setUser({
+                            id: user.id,
+                            username: user.username,
+                            emailId: user.emailId,
+                            fullName: user.username, // Use username as fullName since it's not in response
+                            roles: user.roles,
+                            authority: authority,
+                            avatar: '', // Default empty avatar
+                        }),
                     )
                 }
                 const redirectUrl = query.get(REDIRECT_URL_KEY)
@@ -72,19 +75,21 @@ function useAuth() {
     const signUp = async (values: SignUpCredential) => {
         try {
             const resp = await apiSignUp(values)
-            if (resp.data) {
-                const { token } = resp.data
-                dispatch(signInSuccess(token))
-                if (resp.data.user) {
+            if (resp.data && resp.data.success) {
+                const { accessToken, refreshToken, expiresIn, user } = resp.data.data
+                dispatch(signInSuccess({ accessToken, refreshToken, expiresIn }))
+                if (user) {
+                    const authority = user.roles?.map(role => role.roleName) || []
                     dispatch(
-                        setUser(
-                            resp.data.user || {
-                                avatar: '',
-                                userName: 'Anonymous',
-                                authority: ['USER'],
-                                email: '',
-                            },
-                        ),
+                        setUser({
+                            id: user.id,
+                            username: user.username,
+                            emailId: user.emailId,
+                            fullName: user.username, // Use username as fullName since it's not in response
+                            roles: user.roles,
+                            authority: authority,
+                            avatar: '',
+                        }),
                     )
                 }
                 const redirectUrl = query.get(REDIRECT_URL_KEY)
@@ -112,8 +117,10 @@ function useAuth() {
         dispatch(
             setUser({
                 avatar: '',
-                userName: '',
-                email: '',
+                username: '',
+                emailId: '',
+                fullName: '',
+                roles: [],
                 authority: [],
             }),
         )
@@ -126,7 +133,7 @@ function useAuth() {
     }
 
     return {
-        authenticated: token && signedIn,
+        authenticated: accessToken && signedIn,
         signIn,
         signUp,
         signOut,
