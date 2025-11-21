@@ -1,26 +1,30 @@
-import { useEffect } from 'react'
-// eslint-disable-next-line import/no-named-as-default
-import i18n from 'i18next'
-import dayjs from 'dayjs'
-import { dateLocales } from '@/locales'
-import { useAppSelector } from '@/store'
+import { useEffect } from "react"
+import dayjs from "dayjs"
+import i18n from "i18next"
+import { useAppSelector } from "@/store"
+import { dateLocales } from "@/locales"
 
 function useLocale() {
-    const locale = useAppSelector((state) => state.locale.currentLang)
+  const locale = useAppSelector((s) => s.locale.currentLang)
 
-    useEffect(() => {
-        const formattedLang = locale.replace(/-([a-z])/g, function (g) {
-            return g[1].toUpperCase()
-        })
-        if (locale !== i18n.language) {
-            i18n.changeLanguage(formattedLang)
-        }
-        dateLocales[formattedLang]().then(() => {
-            dayjs.locale(formattedLang)
-        })
-    }, [locale])
+  useEffect(() => {
+    const formattedLang = locale.replace(/-([a-z])/g, (g) => g[1].toUpperCase())
 
-    return locale
+    if (locale !== i18n.language) {
+      i18n.changeLanguage(formattedLang)
+    }
+
+    const loader = dateLocales[formattedLang]
+
+    if (typeof loader === "function") {
+      loader().then(() => dayjs.locale(formattedLang))
+    } else {
+      console.warn(`Locale loader missing for ${formattedLang}`)
+      dayjs.locale("en") // fallback
+    }
+  }, [locale])
+
+  return locale
 }
 
-export default useLocale
+export default useLocale  

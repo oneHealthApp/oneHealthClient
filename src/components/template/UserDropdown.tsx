@@ -2,6 +2,7 @@ import Avatar from '@/components/ui/Avatar'
 import Dropdown from '@/components/ui/Dropdown'
 import withHeaderItem from '@/utils/hoc/withHeaderItem'
 import useAuth from '@/utils/hooks/useAuth'
+import { useAppSelector } from '@/store'
 import { Link } from 'react-router-dom'
 import classNames from 'classnames'
 import { HiOutlineLogout, HiOutlineUser } from 'react-icons/hi'
@@ -18,13 +19,23 @@ const dropdownItemList: DropdownList[] = []
 
 const _UserDropdown = ({ className }: CommonProps) => {
     const { signOut } = useAuth()
+    const user = useAppSelector((state) => state.auth.user)
 
     const UserAvatar = (
         <div className={classNames(className, 'flex items-center gap-2')}>
-            <Avatar size={32} shape="circle" icon={<HiOutlineUser />} />
+            <Avatar 
+                size={32} 
+                shape="circle" 
+                src={user.avatar}
+                icon={<HiOutlineUser />} 
+            />
             <div className="hidden md:block">
-                <div className="text-xs capitalize">admin</div>
-                <div className="font-bold">User01</div>
+                <div className="text-xs capitalize">
+                    {user.roles?.[0]?.roleName || 'User'}
+                </div>
+                <div className="font-bold">
+                    {user.fullName || user.username || 'User'}
+                </div>
             </div>
         </div>
     )
@@ -38,12 +49,18 @@ const _UserDropdown = ({ className }: CommonProps) => {
             >
                 <Dropdown.Item variant="header">
                     <div className="py-2 px-3 flex items-center gap-2">
-                        <Avatar shape="circle" icon={<HiOutlineUser />} />
+                        <Avatar 
+                            shape="circle" 
+                            src={user.avatar}
+                            icon={<HiOutlineUser />} 
+                        />
                         <div>
                             <div className="font-bold text-gray-900 dark:text-gray-100">
-                                User01
+                                {user.fullName || user.username || 'User'}
                             </div>
-                            <div className="text-xs">user01@mail.com</div>
+                            <div className="text-xs">
+                                {user.emailId || 'user@mail.com'}
+                            </div>
                         </div>
                     </div>
                 </Dropdown.Item>
