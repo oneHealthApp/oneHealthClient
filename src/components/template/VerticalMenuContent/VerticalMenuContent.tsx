@@ -42,7 +42,7 @@ const VerticalMenuContent = (props: VerticalMenuContentProps) => {
     const [defaulExpandKey, setDefaulExpandKey] = useState<string[]>([])
 
     const { activedRoute } = useMenuActive(navigationTree, routeKey)
-
+console.log("ct",activedRoute)
     useEffect(() => {
         if (defaulExpandKey.length === 0 && activedRoute?.parentKey) {
             setDefaulExpandKey([activedRoute?.parentKey])

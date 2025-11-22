@@ -7,4 +7,5 @@ export * from './slices/theme/themeSlice'
 export * from './slices/locale/localeSlice'
 export * from './rootReducer'
 export * from './hook'
+export * from './slices/tenant/tenantListSlice'
 export default store

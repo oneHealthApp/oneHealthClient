@@ -1,5 +1,5 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-import { SLICE_BASE_NAME } from './constants'
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { SLICE_BASE_NAME } from "./constants";
 
 export type UserState = {
     id?: string
@@ -61,5 +61,5 @@ const userSlice = createSlice({
     },
 })
 
-export const { setUser } = userSlice.actions
-export default userSlice.reducer
+export const { setUser } = userSlice.actions;
+export default userSlice.reducer;
