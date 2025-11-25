@@ -124,8 +124,19 @@ const signIn = async (
         
         if (resp && resp.success && resp.data) {
             const signInData = resp.data  // This is the SignInResponse
-            // The API response structure is: resp.data.data contains { user, accessToken, refreshToken, expiresIn }
-            const { accessToken, refreshToken, expiresIn, user } = signInData.data
+            console.log('🔍 SignIn: signInData structure:', JSON.stringify(signInData, null, 2))
+            
+            // Try both access patterns to see which one works
+            const directAccess = (signInData as any)
+            const nestedAccess = (signInData as any).data
+            
+            console.log('🔍 Direct access - user exists:', !!directAccess.user)
+            console.log('🔍 Direct access - accessToken exists:', !!directAccess.accessToken)
+            console.log('🔍 Nested access - user exists:', !!nestedAccess?.user)
+            console.log('🔍 Nested access - accessToken exists:', !!nestedAccess?.accessToken)
+            
+            // Use the correct access pattern based on your API response
+            const { accessToken, refreshToken, expiresIn, user } = directAccess
             console.log('✅ SignIn: Authentication successful, dispatching Redux actions...')
             
             dispatch(signInSuccess({ accessToken, refreshToken, expiresIn }))
