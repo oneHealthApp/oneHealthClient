@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Formik, Form, Field } from "formik";
 import * as Yup from "yup";
 
@@ -6,13 +6,21 @@ import { FormContainer, FormItem } from "@/components/ui/Form";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 
-// ==========================
-// VALIDATION
-// ==========================
+// ====== PIN API RETURN TYPE (Tenant version still uses same structure) ======
+interface PincodeData {
+  districtName: string;
+  districtCode: string;
+  stateName: string;
+  stateCode: string;
+
+  talukaList: { name: string; code: string }[];
+  villageList: { name: string; code: string }[];
+}
+
 const validationSchema = Yup.object().shape({
   name: Yup.string().required("Tenant name required"),
   slug: Yup.string().required("Slug required"),
-  isActive: Yup.boolean(),
+
   pin: Yup.string().required("PIN required").length(6, "PIN must be 6 digits"),
   state: Yup.string().required("State required"),
   district: Yup.string().required("District required"),
@@ -21,38 +29,67 @@ const validationSchema = Yup.object().shape({
   address: Yup.string().required("Full address required"),
 });
 
-// ==========================
-// COMPONENT
-// ==========================
 export default function CreateTenant() {
-  const [districtList, setDistrictList] = useState([]);
-  const [talukaList, setTalukaList] = useState([]);
-  const [villageList, setVillageList] = useState([]);
+  const [locationData, setLocationData] = useState<PincodeData | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedTaluka, setSelectedTaluka] = useState("");
 
-  // PIN → Address Autofill
-  async function fetchPincode(pin, setFieldValue) {
-    if (pin.length !== 6) return;
+  // ====== Fetch PIN ======
+  async function fetchPincode(pin: string, setFieldValue: any) {
+    if (pin.length !== 6) {
+      setLocationData(null);
+      return;
+    }
 
     try {
       const res = await fetch(
         `https://platform.shauryatechnosoft.com/core-master-service/api/v1/o/pincode?pincode=${pin}`
       );
+
       const { data } = await res.json();
 
-      setDistrictList([data?.districtName]);
-      setTalukaList(data?.talukaList || []);
-      setVillageList(data?.villageList || []);
+      if (!data) return;
 
-      setFieldValue("state", data?.stateName || "");
-      setFieldValue("district", data?.districtName || "");
-      setFieldValue("districtCode", data?.districtCode || "");
-      setFieldValue("stateCode", data?.stateCode || "");
-      setFieldValue("countryName", "India");
+      setLocationData(data);
+
+      // AUTOFILL STATE, DISTRICT
+      setFieldValue("state", data.stateName);
+      setFieldValue("stateCode", data.stateCode);
+
+      setFieldValue("district", data.districtName);
+      setFieldValue("districtCode", data.districtCode);
+
+      setSelectedDistrict(data.districtName);
+
+      // Reset next levels
+      setFieldValue("subDistrict", "");
+      setFieldValue("town", "");
+      setSelectedTaluka("");
+
       setFieldValue("countryId", "IN");
-    } catch (err) {
-      console.log(err);
+      setFieldValue("countryName", "India");
+    } catch (e) {
+      console.log("PIN API Error:", e);
     }
   }
+
+  // ====== DISTRICT LIST (only 1 in this API) ======
+  const getDistricts = () => {
+    if (!locationData) return [];
+    return [locationData.districtName];
+  };
+
+  // ====== TALUKA LIST ======
+  const getTalukas = () => {
+    if (!locationData) return [];
+    return locationData.talukaList.map((t) => t.name);
+  };
+
+  // ====== VILLAGE LIST (filtered by selected taluka if needed) ======
+  const getVillages = () => {
+    if (!locationData) return [];
+    return locationData.villageList.map((v) => v.name);
+  };
 
   return (
     <div>
@@ -66,7 +103,6 @@ export default function CreateTenant() {
           slug: "",
           isActive: true,
 
-          // Address
           pin: "",
           state: "",
           stateCode: "",
@@ -82,20 +118,22 @@ export default function CreateTenant() {
         }}
         validationSchema={validationSchema}
         onSubmit={(values, { resetForm }) => {
-          console.log("SUBMIT TENANT PAYLOAD:", values);
-          alert(JSON.stringify(values, null, 2));
+          console.log("TENANT PAYLOAD:", values);
+          alert("Tenant submitted!");
           resetForm();
+          setLocationData(null);
+          setSelectedDistrict("");
+          setSelectedTaluka("");
         }}
       >
         {({ errors, touched, setFieldValue, resetForm }) => (
           <Form>
             <FormContainer>
-              {/* ROW 1: BASIC DETAILS */}
+              {/* BASIC DETAILS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {/* Tenant Name */}
                 <FormItem
                   label="Tenant Name"
-                  invalid={errors.name && touched.name}
+                  invalid={!!errors.name && touched.name}
                   errorMessage={errors.name}
                 >
                   <Field
@@ -105,21 +143,19 @@ export default function CreateTenant() {
                   />
                 </FormItem>
 
-                {/* Slug */}
                 <FormItem
                   label="Slug"
-                  invalid={errors.slug && touched.slug}
+                  invalid={!!errors.slug && touched.slug}
                   errorMessage={errors.slug}
                 >
                   <Field
                     name="slug"
                     component={Input}
-                    placeholder="Unique slug"
+                    placeholder="tenant-slug"
                   />
                 </FormItem>
 
-                {/* Active? */}
-                {/* <FormItem label="Status">
+                <FormItem label="Status">
                   <Field
                     as="select"
                     name="isActive"
@@ -128,34 +164,34 @@ export default function CreateTenant() {
                     <option value={true}>Active</option>
                     <option value={false}>Inactive</option>
                   </Field>
-                </FormItem> */}
+                </FormItem>
               </div>
 
-              {/* ADDRESS SECTION */}
+              {/* ADDRESS */}
               <h2 className="text-xl font-semibold mt-6 mb-2">Address</h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* PIN */}
                 <FormItem
                   label="PIN Code"
-                  invalid={errors.pin && touched.pin}
+                  invalid={!!errors.pin && touched.pin}
                   errorMessage={errors.pin}
                 >
                   <Field
                     name="pin"
                     component={Input}
                     placeholder="PIN Code"
-                    onChange={(e) => {
+                    onChange={(e: any) => {
                       setFieldValue("pin", e.target.value);
                       fetchPincode(e.target.value, setFieldValue);
                     }}
                   />
                 </FormItem>
 
-                {/* State */}
+                {/* STATE */}
                 <FormItem
                   label="State"
-                  invalid={errors.state && touched.state}
+                  invalid={!!errors.state && touched.state}
                   errorMessage={errors.state}
                 >
                   <Field
@@ -166,19 +202,36 @@ export default function CreateTenant() {
                   />
                 </FormItem>
 
-                {/* District */}
+                {/* DISTRICT */}
                 <FormItem
                   label="District"
-                  invalid={errors.district && touched.district}
+                  invalid={!!errors.district && touched.district}
                   errorMessage={errors.district}
                 >
                   <Field
                     as="select"
                     name="district"
                     className="border p-2 rounded w-full"
+                    onChange={(e: any) => {
+                      const val = e.target.value;
+                      setFieldValue("district", val);
+                      setSelectedDistrict(val);
+
+                      if (locationData?.districtName === val) {
+                        setFieldValue(
+                          "districtCode",
+                          locationData.districtCode
+                        );
+                      }
+
+                      // Reset
+                      setFieldValue("subDistrict", "");
+                      setFieldValue("town", "");
+                      setSelectedTaluka("");
+                    }}
                   >
                     <option value="">Select District</option>
-                    {districtList.map((d, i) => (
+                    {getDistricts().map((d, i) => (
                       <option key={i} value={d}>
                         {d}
                       </option>
@@ -186,19 +239,31 @@ export default function CreateTenant() {
                   </Field>
                 </FormItem>
 
-                {/* Taluka */}
+                {/* TALUKA */}
                 <FormItem
                   label="Taluka"
-                  invalid={errors.subDistrict && touched.subDistrict}
+                  invalid={!!errors.subDistrict && touched.subDistrict}
                   errorMessage={errors.subDistrict}
                 >
                   <Field
                     as="select"
                     name="subDistrict"
                     className="border p-2 rounded w-full"
+                    onChange={(e: any) => {
+                      const val = e.target.value;
+                      setFieldValue("subDistrict", val);
+                      setSelectedTaluka(val);
+
+                      const match = locationData?.talukaList.find(
+                        (t) => t.name === val
+                      );
+                      setFieldValue("subDistrictCode", match?.code || "");
+
+                      setFieldValue("town", "");
+                    }}
                   >
                     <option value="">Select Taluka</option>
-                    {talukaList.map((t, i) => (
+                    {getTalukas().map((t, i) => (
                       <option key={i} value={t}>
                         {t}
                       </option>
@@ -206,19 +271,28 @@ export default function CreateTenant() {
                   </Field>
                 </FormItem>
 
-                {/* Village */}
+                {/* VILLAGE */}
                 <FormItem
                   label="Village"
-                  invalid={errors.town && touched.town}
+                  invalid={!!errors.town && touched.town}
                   errorMessage={errors.town}
                 >
                   <Field
                     as="select"
                     name="town"
                     className="border p-2 rounded w-full"
+                    onChange={(e: any) => {
+                      const val = e.target.value;
+                      setFieldValue("town", val);
+
+                      const match = locationData?.villageList.find(
+                        (v) => v.name === val
+                      );
+                      setFieldValue("townCode", match?.code || "");
+                    }}
                   >
                     <option value="">Select Village</option>
-                    {villageList.map((v, i) => (
+                    {getVillages().map((v, i) => (
                       <option key={i} value={v}>
                         {v}
                       </option>
@@ -226,10 +300,10 @@ export default function CreateTenant() {
                   </Field>
                 </FormItem>
 
-                {/* Full Address */}
+                {/* ADDRESS */}
                 <FormItem
                   label="Full Address"
-                  invalid={errors.address && touched.address}
+                  invalid={!!errors.address && touched.address}
                   errorMessage={errors.address}
                 >
                   <Field

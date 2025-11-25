@@ -39,3 +39,43 @@ export type Tenant = {
   addressId?: string | null;
   address?: Address | null;
 };
+
+export interface TenantFormData {
+  name: string;
+  slug: string;
+  isActive: boolean;
+
+  pin: string;
+  state: string;
+  stateCode: string;
+  district: string;
+  districtCode: string;
+  subDistrict: string;
+  subDistrictCode: string;
+  town: string;
+  townCode: string;
+  address: string;
+  countryId: string;
+  countryName: string;
+}
+
+export interface TenantCreatePayload {
+  name: string;
+  slug: string;
+  isActive: boolean;
+  address: {
+    address: string;
+    pin: string;
+    state: string;
+    stateCode: string;
+    district: string;
+    districtCode: string;
+    subDistrict: string;
+    subDistrictCode: string;
+    town: string;
+    townCode: string;
+    countryId: string;
+    countryName: string;
+    geoLocation: object;
+  };
+}
