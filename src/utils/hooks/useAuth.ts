@@ -222,7 +222,6 @@ function useAuth() {
 
   return {
     authenticated: Boolean(accessToken && signedIn),
-    authenticated: Boolean(accessToken && signedIn),
     signIn,
     signUp,
     signOut,
